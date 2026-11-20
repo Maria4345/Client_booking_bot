@@ -6,6 +6,8 @@ import hmac
 from datetime import datetime, date
 
 from aiogram import Bot, Dispatcher, F
+from aiohttp import web
+from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
 from aiogram.filters import CommandStart, Command
 from aiogram.types import (
     Message,
@@ -990,16 +992,52 @@ async def unknown_handler(message: Message):
     )
 
 
-# Запуск бота
-async def main():
+# Запуск бота через webhook на Render
+
+WEBHOOK_PATH = "/webhook"
+WEBHOOK_SECRET = os.getenv("WEBHOOK_SECRET")
+
+
+async def on_startup(bot: Bot):
+    render_url = os.getenv("RENDER_EXTERNAL_URL")
+
+    if not render_url:
+        raise RuntimeError("Не найден адрес Render")
+
+    if not WEBHOOK_SECRET:
+        raise RuntimeError("Не задан WEBHOOK_SECRET")
+
+    await bot.set_webhook(
+        url=f"{render_url}{WEBHOOK_PATH}",
+        secret_token=WEBHOOK_SECRET
+    )
+
+
+def main():
     init_db()
 
-    print("Бот запускается...")
-    await dp.start_polling(bot)
+    app = web.Application()
+
+    SimpleRequestHandler(
+        dispatcher=dp,
+        bot=bot,
+        secret_token=WEBHOOK_SECRET
+    ).register(app, path=WEBHOOK_PATH)
+
+    dp.startup.register(on_startup)
+    setup_application(app, dp, bot=bot)
+
+    print("Бот запускается через webhook...")
+
+    web.run_app(
+        app,
+        host="0.0.0.0",
+        port=int(os.getenv("PORT", "10000"))
+    )
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
 
 
 
