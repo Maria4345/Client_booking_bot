@@ -279,9 +279,9 @@ async def master_login(message: Message, state: FSMContext):
     ~CommandStart()
 )
 async def check_master_password(message: Message, state: FSMContext):
-    if not message.text or not hmac.compare_digest(
-        message.text,
-        MASTER_PASSWORD
+ if not message.text or not hmac.compare_digest(
+    message.text.encode("utf-8"),
+    MASTER_PASSWORD.encode("utf-8")
     ):
         await message.answer(
             "Неверный пароль. Попробуй ещё раз или отправь /cancel."
