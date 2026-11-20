@@ -273,7 +273,11 @@ async def master_login(message: Message, state: FSMContext):
 
 
 # Проверка пароля
-@dp.message(MasterLogin.waiting_for_password)
+@dp.message(
+    MasterLogin.waiting_for_password,
+    ~Command("cancel"),
+    ~CommandStart()
+)
 async def check_master_password(message: Message, state: FSMContext):
     if not message.text or not hmac.compare_digest(
         message.text,
